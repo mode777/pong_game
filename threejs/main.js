@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 // Configuration
-const RENDER_WIDTH = 1024;
-const RENDER_HEIGHT = 768;
+const RENDER_WIDTH = 720;
+const RENDER_HEIGHT = 480;
 const MODEL_PATH = './sk_adventure_warrior_01.glb';
 
 class CharacterShowcase {
