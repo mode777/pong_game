@@ -33,7 +33,7 @@ class CharacterShowcase {
         
         // Create renderer with optimized settings
         this.renderer = new THREE.WebGLRenderer({
-            antialias: true,
+            antialias: false,
             powerPreference: 'high-performance'
         });
         this.renderer.setSize(RENDER_WIDTH, RENDER_HEIGHT);
