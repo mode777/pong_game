@@ -4,7 +4,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 // Configuration
 const RENDER_WIDTH = 1024;
 const RENDER_HEIGHT = 576;
-const MODEL_PATH = './AnimationLibrary_Godot_Standard.glb';
+const MODEL_PATH = './scene.glb';
 
 class CharacterShowcase {
     constructor() {
@@ -58,14 +58,14 @@ class CharacterShowcase {
         this.scene.add(ambientLight);
         
         // Add ground plane for reference
-        const groundGeometry = new THREE.PlaneGeometry(10, 10);
-        const groundMaterial = new THREE.MeshBasicMaterial({
-            color: 0x16213e,
-            side: THREE.DoubleSide
-        });
-        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-        ground.rotation.x = -Math.PI / 2;
-        this.scene.add(ground);
+        // const groundGeometry = new THREE.PlaneGeometry(10, 10);
+        // const groundMaterial = new THREE.MeshBasicMaterial({
+        //     color: 0x16213e,
+        //     side: THREE.DoubleSide
+        // });
+        // const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        // ground.rotation.x = -Math.PI / 2;
+        // this.scene.add(ground);
         
         // Load model
         this.loadModel();
