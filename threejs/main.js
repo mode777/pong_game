@@ -41,7 +41,7 @@ class CharacterShowcase {
         });
         this.renderer.setSize(RENDER_WIDTH, RENDER_HEIGHT);
         this.renderer.setPixelRatio(1); // Force 1:1 pixel ratio for performance
-        this.renderer.shadowMap.enabled = false; // No shadows for performance
+        this.renderer.shadowMap.enabled = true; // Enable shadows for better visuals
         
         // Append to container
         const container = document.getElementById('canvas-container');
@@ -50,7 +50,7 @@ class CharacterShowcase {
         // Add simple directional light
         const light = new THREE.DirectionalLight(0xffffff, 1.5);
         light.position.set(5, 10, 5);
-        light.castShadow = false;
+        light.castShadow = true;
         this.scene.add(light);
         
         // Add ambient light for better visibility
@@ -100,8 +100,8 @@ class CharacterShowcase {
                 // Optimize materials for performance
                 this.model.traverse((child) => {
                     if (child.isMesh) {
-                        child.castShadow = false;
-                        child.receiveShadow = false;
+                        child.castShadow = true;
+                        child.receiveShadow = true;
                         
                         // Use simpler materials if possible
                         console.log(child.material)
