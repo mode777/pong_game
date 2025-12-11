@@ -4,7 +4,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 // Configuration
 const RENDER_WIDTH = 1024;
 const RENDER_HEIGHT = 576;
-const MODEL_PATH = './sk_adventure_warrior_01.glb';
+const MODEL_PATH = './AnimationLibrary_Godot_Standard.glb';
 
 class CharacterShowcase {
     constructor() {
@@ -104,6 +104,7 @@ class CharacterShowcase {
                         child.receiveShadow = false;
                         
                         // Use simpler materials if possible
+                        console.log(child.material)
                         if (child.material) {
                             child.material.flatShading = false;
                             child.material.needsUpdate = true;
@@ -144,6 +145,16 @@ class CharacterShowcase {
         
         // Stop all current actions
         this.mixer.stopAllAction();
+        
+        // Reset to T-Pose (first animation) before playing next animation
+        if (this.animations.length > 0 && this.currentAnimationIndex !== 0) {
+            const tPoseAction = this.mixer.clipAction(this.animations[0]);
+            tPoseAction.reset();
+            tPoseAction.play();
+            tPoseAction.time = 0;
+            this.mixer.update(0);
+            tPoseAction.stop();
+        }
         
         // Get next animation
         const animation = this.animations[this.currentAnimationIndex];
