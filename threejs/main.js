@@ -1,7 +1,7 @@
 // Configuration
 const RENDER_WIDTH = 1024;
 const RENDER_HEIGHT = 576;
-const MODEL_PATH = './characters.glb';
+const MODEL_PATH = './Characters.glb';
 
 class CharacterShowcase {
     constructor() {
