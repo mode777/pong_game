@@ -1,261 +1,372 @@
-import * as BABYLON from '@babylonjs/core';
+import { Engine } from '@babylonjs/core/Engines/engine';
+import { Scene } from '@babylonjs/core/scene';
+import { ArcRotateCamera } from '@babylonjs/core/Cameras/arcRotateCamera';
+import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight';
+import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { Color3, Color4 } from '@babylonjs/core/Maths/math.color';
+import { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh';
+import { AnimationGroup } from '@babylonjs/core/Animations/animationGroup';
+import { ImportMeshAsync } from '@babylonjs/core/Loading/sceneLoader';
 import '@babylonjs/loaders/glTF';
 
+// Constants
+const CANVAS_ID = 'renderCanvas';
+const MODEL_PATH = './assets/';
+const MODEL_FILENAME = 'Characters.glb';
+const SCENE_BACKGROUND_COLOR = '#1a1a2e';
+const FPS_UPDATE_INTERVAL = 1000;
+const ANIMATION_DELAY = 500;
+const CAMERA_ROTATION_SPEED = 0.0005;
+const CAMERA_RADIUS = 8;
+const RANDOM_POSITION_RADIUS = 10;
+
+// Engine configuration
+const ENGINE_CONFIG = {
+    antialias: false,
+    adaptToDeviceRatio: false,
+    powerPreference: "low-power" as const,
+    preserveDrawingBuffer: false,
+    stencil: false,
+    depth: true,
+};
+
+// Camera configuration
+const CAMERA_CONFIG = {
+    alpha: 0,
+    beta: Math.PI / 3,
+    radius: 4,
+    lowerRadiusLimit: 2,
+    upperRadiusLimit: 10,
+};
+
+// Lighting configuration
+const LIGHTING_CONFIG = {
+    hemispheric: {
+        intensity: 1.5,
+        groundColor: { r: 0.3, g: 0.3, b: 0.4 },
+    },
+    directional: {
+        direction: { x: -1, y: -2, z: -1 },
+        intensity: 0.6,
+    },
+};
+
+interface UIElements {
+    animationName: HTMLElement | null;
+    animationInfo: HTMLElement | null;
+    fpsCounter: HTMLElement | null;
+}
+
 class CharacterShowcase {
-    private currentAnimationIndex: number = 0;
-    private animationGroups: BABYLON.AnimationGroup[] = [];
-    private frameCount: number = 0;
-    private lastFpsUpdate: number = performance.now();
-    private fps: number = 0;
-    private engine!: BABYLON.Engine;
-    private scene!: BABYLON.Scene;
-    private camera!: BABYLON.ArcRotateCamera;
-    private model?: BABYLON.AbstractMesh;
+    private currentAnimationIndex = 0;
+    private animationGroups: AnimationGroup[] = [];
+    private frameCount = 0;
+    private lastFpsUpdate = performance.now();
+    private fps = 0;
+    private engine!: Engine;
+    private scene!: Scene;
+    private camera!: ArcRotateCamera;
+    private model?: AbstractMesh;
+    private ui: UIElements;
     
     constructor() {
+        this.ui = this.initializeUIElements();
         this.init();
     }
     
-    private init(): void {
-        // Get canvas element
-        const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement;
+    private initializeUIElements(): UIElements {
+        return {
+            animationName: document.getElementById('animation-name'),
+            animationInfo: document.getElementById('animation-info'),
+            fpsCounter: document.getElementById('fps-counter'),
+        };
+    }
+
+    private getCanvasElement(): HTMLCanvasElement | null {
+        const canvas = document.getElementById(CANVAS_ID) as HTMLCanvasElement;
         
         if (!canvas) {
-            console.error('Canvas element not found');
+            console.error(`Canvas element with id '${CANVAS_ID}' not found`);
+        }
+        
+        return canvas;
+    }
+    
+    private init(): void {
+        const canvas = this.getCanvasElement();
+        
+        if (!canvas) {
             return;
         }
         
-        // Create engine with high-performance settings
-        this.engine = new BABYLON.Engine(canvas, false, {
-            antialias: false,              // No AA for better performance
-            adaptToDeviceRatio: false,     // Render at device pixel ratio 1
-            powerPreference: "low-power",  // Optimize for low-power devices
-            preserveDrawingBuffer: false,  // Better performance
-            stencil: false,                // Disable stencil buffer if not needed
-            depth: true
-        });
-        
-        // Force fixed resolution for consistent performance
+        this.initializeEngine(canvas);
+        this.initializeScene();
+        this.initializeCamera(canvas);
+        this.initializeLighting();
+        this.loadModel();
+        this.setupWindowResize();
+        this.startRenderLoop();
+    }
+
+    private initializeEngine(canvas: HTMLCanvasElement): void {
+        this.engine = new Engine(canvas, false, ENGINE_CONFIG);
         this.engine.setHardwareScalingLevel(1.0);
-        
-        // Create scene with optimizations
-        this.scene = new BABYLON.Scene(this.engine);
-        this.scene.clearColor = BABYLON.Color4.FromHexString('#1a1a2e');
-        
-        // Disable auto-clear for potential performance gains
+    }
+
+    private initializeScene(): void {
+        this.scene = new Scene(this.engine);
+        this.scene.clearColor = Color4.FromHexString(SCENE_BACKGROUND_COLOR);
         this.scene.autoClear = false;
         this.scene.autoClearDepthAndStencil = false;
-        
-        // Create camera
-        this.camera = new BABYLON.ArcRotateCamera(
+    }
+
+    private initializeCamera(canvas: HTMLCanvasElement): void {
+        this.camera = new ArcRotateCamera(
             "camera",
-            0,                    // alpha (horizontal rotation)
-            Math.PI / 3,         // beta (vertical rotation)
-            4,                   // radius
-            new BABYLON.Vector3(0, 1, 0),  // target
+            CAMERA_CONFIG.alpha,
+            CAMERA_CONFIG.beta,
+            CAMERA_CONFIG.radius,
+            new Vector3(0, 1, 0),
             this.scene
         );
         this.camera.attachControl(canvas, false);
-        this.camera.lowerRadiusLimit = 2;
-        this.camera.upperRadiusLimit = 10;
-        
-        // Simple lighting for performance
-        const light = new BABYLON.HemisphericLight(
+        this.camera.lowerRadiusLimit = CAMERA_CONFIG.lowerRadiusLimit;
+        this.camera.upperRadiusLimit = CAMERA_CONFIG.upperRadiusLimit;
+    }
+
+    private initializeLighting(): void {
+        const hemisphericLight = new HemisphericLight(
             "light",
-            new BABYLON.Vector3(0, 1, 0),
+            new Vector3(0, 1, 0),
             this.scene
         );
-        light.intensity = 1.5;
-        light.groundColor = new BABYLON.Color3(0.3, 0.3, 0.4);
+        hemisphericLight.intensity = LIGHTING_CONFIG.hemispheric.intensity;
+        hemisphericLight.groundColor = new Color3(
+            LIGHTING_CONFIG.hemispheric.groundColor.r,
+            LIGHTING_CONFIG.hemispheric.groundColor.g,
+            LIGHTING_CONFIG.hemispheric.groundColor.b
+        );
         
-        // Additional directional light for better visibility
-        const dirLight = new BABYLON.DirectionalLight(
+        const directionalLight = new DirectionalLight(
             "dirLight",
-            new BABYLON.Vector3(-1, -2, -1),
+            new Vector3(
+                LIGHTING_CONFIG.directional.direction.x,
+                LIGHTING_CONFIG.directional.direction.y,
+                LIGHTING_CONFIG.directional.direction.z
+            ),
             this.scene
         );
-        dirLight.intensity = 0.6;
-        
-        // Load model
-        this.loadModel();
-        
-        // Handle window resize
-        window.addEventListener('resize', () => this.onWindowResize());
-        this.onWindowResize();
-        
-        // Start render loop
+        directionalLight.intensity = LIGHTING_CONFIG.directional.intensity;
+    }
+
+    private setupWindowResize(): void {
+        window.addEventListener('resize', () => this.handleWindowResize());
+        this.handleWindowResize();
+    }
+
+    private startRenderLoop(): void {
         this.engine.runRenderLoop(() => {
             this.animate();
         });
     }
     
-    private loadModel(): void {
-        const animationNameEl = document.getElementById('animation-name');
-        if (animationNameEl) {
-            animationNameEl.textContent = 'Loading model...';
+    private updateUIText(element: HTMLElement | null, text: string): void {
+        if (element) {
+            element.textContent = text;
+        }
+    }
+
+    private async loadModel(): Promise<void> {
+        this.updateUIText(this.ui.animationName, 'Loading model...');
+        
+        try {
+            const result = await ImportMeshAsync(
+                MODEL_PATH + MODEL_FILENAME,
+                this.scene,
+                {
+                    onProgress: (event) => {
+                        this.handleLoadProgress(event);
+                    }
+                }
+            );
+            
+            this.handleModelLoaded(result.meshes, result.animationGroups);
+        } catch (error) {
+            this.handleLoadError(
+                error instanceof Error ? error.message : 'Unknown error',
+                error
+            );
+        }
+    }
+
+    private handleModelLoaded(
+        meshes: AbstractMesh[],
+        animationGroups: AnimationGroup[]
+    ): void {
+        if (meshes.length > 0) {
+            this.setupModel(meshes);
         }
         
-        BABYLON.SceneLoader.ImportMesh(
-            "",                    // Import all meshes
-            "./assets/",           // Root URL
-            "Characters.glb",      // Filename
-            this.scene,
-            (meshes, _particleSystems, _skeletons, animationGroups) => {
-                // Model loaded successfully
-                if (meshes.length > 0) {
-                    this.model = meshes[0];
-                    
-                    // Center and position model
-                    const boundingInfo = this.model.getHierarchyBoundingVectors();
-                    const center = BABYLON.Vector3.Center(boundingInfo.min, boundingInfo.max);
-                    
-                    // Center model
-                    this.model.position.x = -center.x;
-                    this.model.position.y = -boundingInfo.min.y;
-                    this.model.position.z = -center.z;
-                    
-                    // Optimize meshes for performance
-                    meshes.forEach((mesh) => {
-                        console.log(mesh.name);
-                        if (mesh.material) {
-                            // Freeze materials to avoid shader recompilation
-                            mesh.material.freeze();
-                        }
-                        
-                        // Disable unnecessary features
-                        mesh.receiveShadows = false;
+        if (animationGroups && animationGroups.length > 0) {
+            this.setupAnimations(animationGroups);
+        } else {
+            this.updateUIText(this.ui.animationName, 'No animations found');
+            this.updateUIText(this.ui.animationInfo, 'Model loaded successfully');
+        }
+    }
 
-                        // Move mesh to random position in 10m radius
-                        if (mesh.name !== "__root__") {
-                            mesh.position.x += (Math.random() - 0.5) * 10;
-                            mesh.position.z += (Math.random() - 0.5) * 10;
-                        }
-                    });
-                    
-                    console.log(`Loaded ${meshes.length} meshes`);
-                }
-                
-                // Setup animations
-                if (animationGroups && animationGroups.length > 0) {
-                    this.animationGroups = animationGroups;
-                    
-                    // Stop all animations initially
-                    this.animationGroups.forEach(ag => ag.stop());
-                    
-                    console.log(`Found ${this.animationGroups.length} animations:`, 
-                        this.animationGroups.map(ag => ag.name));
-                    
-                    this.playNextAnimation();
-                } else {
-                    const animationNameEl = document.getElementById('animation-name');
-                    const animationInfoEl = document.getElementById('animation-info');
-                    if (animationNameEl) {
-                        animationNameEl.textContent = 'No animations found';
-                    }
-                    if (animationInfoEl) {
-                        animationInfoEl.textContent = 'Model loaded successfully';
-                    }
-                }
-            },
-            (event) => {
-                // Progress callback
-                if (event.lengthComputable) {
-                    const percent = (event.loaded / event.total * 100).toFixed(0);
-                    const animationInfoEl = document.getElementById('animation-info');
-                    if (animationInfoEl) {
-                        animationInfoEl.textContent = `Loading: ${percent}%`;
-                    }
-                }
-            },
-            (_scene, message, exception) => {
-                // Error callback
-                console.error('Error loading model:', message, exception);
-                const animationNameEl = document.getElementById('animation-name');
-                const animationInfoEl = document.getElementById('animation-info');
-                if (animationNameEl) {
-                    animationNameEl.textContent = 'Error loading model';
-                }
-                if (animationInfoEl) {
-                    animationInfoEl.textContent = message || 'Unknown error';
-                }
+    private setupModel(meshes: AbstractMesh[]): void {
+        this.model = meshes[0];
+        
+        this.centerModel();
+        this.optimizeMeshes(meshes);
+        
+        console.log(`Loaded ${meshes.length} meshes`);
+    }
+
+    private centerModel(): void {
+        if (!this.model) return;
+
+        const boundingInfo = this.model.getHierarchyBoundingVectors();
+        const center = Vector3.Center(boundingInfo.min, boundingInfo.max);
+        
+        this.model.position.x = -center.x;
+        this.model.position.y = -boundingInfo.min.y;
+        this.model.position.z = -center.z;
+    }
+
+    private optimizeMeshes(meshes: AbstractMesh[]): void {
+        meshes.forEach((mesh) => {
+            console.log(mesh.name);
+            
+            if (mesh.material) {
+                mesh.material.freeze();
             }
+            
+            mesh.receiveShadows = false;
+
+            if (mesh.name !== "__root__") {
+                this.randomizePosition(mesh);
+            }
+        });
+    }
+
+    private randomizePosition(mesh: AbstractMesh): void {
+        mesh.position.x += (Math.random() - 0.5) * RANDOM_POSITION_RADIUS;
+        mesh.position.z += (Math.random() - 0.5) * RANDOM_POSITION_RADIUS;
+    }
+
+    private setupAnimations(animationGroups: AnimationGroup[]): void {
+        this.animationGroups = animationGroups;
+        
+        this.animationGroups.forEach(ag => ag.stop());
+        
+        console.log(
+            `Found ${this.animationGroups.length} animations:`,
+            this.animationGroups.map(ag => ag.name)
         );
+        
+        this.playNextAnimation();
+    }
+
+    private handleLoadProgress(event: any): void {
+        if (event.lengthComputable) {
+            const percent = (event.loaded / event.total * 100).toFixed(0);
+            this.updateUIText(this.ui.animationInfo, `Loading: ${percent}%`);
+        }
+    }
+
+    private handleLoadError(message?: string, exception?: any): void {
+        console.error('Error loading model:', message, exception);
+        this.updateUIText(this.ui.animationName, 'Error loading model');
+        this.updateUIText(this.ui.animationInfo, message || 'Unknown error');
     }
     
     private playNextAnimation(): void {
         if (this.animationGroups.length === 0) return;
         
-        // Stop all current animations
-        this.animationGroups.forEach(ag => ag.stop());
+        this.stopAllAnimations();
         
-        // Get next animation
         const animGroup = this.animationGroups[this.currentAnimationIndex];
         
-        // Update UI
-        const animationNameEl = document.getElementById('animation-name');
-        if (animationNameEl) {
-            animationNameEl.textContent = 
-                animGroup.name || `Animation ${this.currentAnimationIndex + 1}`;
-        }
+        this.updateAnimationUI(animGroup);
+        this.startAnimation(animGroup);
+        this.scheduleNextAnimation(animGroup);
+    }
+
+    private stopAllAnimations(): void {
+        this.animationGroups.forEach(ag => ag.stop());
+    }
+
+    private updateAnimationUI(animGroup: AnimationGroup): void {
+        const animationName = animGroup.name || `Animation ${this.currentAnimationIndex + 1}`;
+        this.updateUIText(this.ui.animationName, animationName);
         
-        const duration = (animGroup.to - animGroup.from) / 60; // Assuming 60 FPS
-        const animationInfoEl = document.getElementById('animation-info');
-        if (animationInfoEl) {
-            animationInfoEl.textContent = 
-                `${this.currentAnimationIndex + 1} of ${this.animationGroups.length} | Duration: ${duration.toFixed(1)}s`;
-        }
-        
-        // Play animation once
+        const duration = this.calculateAnimationDuration(animGroup);
+        const infoText = `${this.currentAnimationIndex + 1} of ${this.animationGroups.length} | Duration: ${duration.toFixed(1)}s`;
+        this.updateUIText(this.ui.animationInfo, infoText);
+    }
+
+    private calculateAnimationDuration(animGroup: AnimationGroup): number {
+        const ASSUMED_FPS = 60;
+        return (animGroup.to - animGroup.from) / ASSUMED_FPS;
+    }
+
+    private startAnimation(animGroup: AnimationGroup): void {
         animGroup.reset();
         animGroup.start(false, 1.0, animGroup.from, animGroup.to);
-        
-        // Setup callback for when animation finishes
+    }
+
+    private scheduleNextAnimation(animGroup: AnimationGroup): void {
         animGroup.onAnimationEndObservable.addOnce(() => {
-            // Wait a moment, then play next animation
             setTimeout(() => {
                 this.currentAnimationIndex = 
                     (this.currentAnimationIndex + 1) % this.animationGroups.length;
                 this.playNextAnimation();
-            }, 500);
+            }, ANIMATION_DELAY);
         });
     }
     
-    private onWindowResize(): void {
-        // Resize engine to match canvas
+    private handleWindowResize(): void {
         this.engine.resize();
     }
     
     private animate(): void {
-        // Update FPS counter
+        this.updateFPS();
+        this.updateCameraPosition();
+        this.scene.render();
+    }
+
+    private updateFPS(): void {
         this.frameCount++;
         const now = performance.now();
-        if (now >= this.lastFpsUpdate + 1000) {
+        
+        if (now >= this.lastFpsUpdate + FPS_UPDATE_INTERVAL) {
             this.fps = Math.round((this.frameCount * 1000) / (now - this.lastFpsUpdate));
             this.frameCount = 0;
             this.lastFpsUpdate = now;
-            const fpsCounterEl = document.getElementById('fps-counter');
-            if (fpsCounterEl) {
-                fpsCounterEl.textContent = `FPS: ${this.fps}`;
-            }
+            
+            this.updateUIText(this.ui.fpsCounter, `FPS: ${this.fps}`);
         }
-        
-        // Rotate camera around model
-        const radius = 8;
-        const speed = 0.0005; // Radians per millisecond
-        const angle = now * speed;
-        this.camera.alpha = angle;
-        this.camera.radius = radius;
-        
-        // Render scene
-        this.scene.render();
     }
+
+    private updateCameraPosition(): void {
+        const now = performance.now();
+        const angle = now * CAMERA_ROTATION_SPEED;
+        
+        this.camera.alpha = angle;
+        this.camera.radius = CAMERA_RADIUS;
+    }
+}
+
+function initializeApplication(): void {
+    new CharacterShowcase();
 }
 
 // Initialize the application when DOM is loaded
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        new CharacterShowcase();
-    });
+    document.addEventListener('DOMContentLoaded', initializeApplication);
 } else {
-    new CharacterShowcase();
+    initializeApplication();
 }
