@@ -89,7 +89,7 @@ class CharacterShowcase {
         BABYLON.SceneLoader.ImportMesh(
             "",                    // Import all meshes
             "./",                  // Root URL
-            "characters.glb",      // Filename
+            "Characters.glb",      // Filename
             this.scene,
             (meshes, particleSystems, skeletons, animationGroups) => {
                 // Model loaded successfully
