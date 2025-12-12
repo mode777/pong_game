@@ -127,8 +127,8 @@ class CharacterShowcase {
                         mesh.receiveShadows = false;
 
                         // Move mesh to random position in 10m radius
-                        mesh.position.x += (Math.random() - 0.5) * 10;
-                        mesh.position.z += (Math.random() - 0.5) * 10;
+                        // mesh.position.x += (Math.random() - 0.5) * 10;
+                        // mesh.position.z += (Math.random() - 0.5) * 10;
                     });
                     
                     console.log(`Loaded ${meshes.length} meshes`);
