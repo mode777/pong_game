@@ -1,17 +1,13 @@
-import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-
 // Configuration
 const RENDER_WIDTH = 1024;
 const RENDER_HEIGHT = 576;
-const MODEL_PATH = './Characters.glb';
+const MODEL_PATH = './characters.glb';
 
 class CharacterShowcase {
     constructor() {
         this.currentAnimationIndex = 0;
         this.animations = [];
-        this.mixer = null;
-        this.clock = new THREE.Clock();
+        this.animationGroups = [];
         this.frameCount = 0;
         this.lastFpsUpdate = performance.now();
         this.fps = 0;
@@ -20,107 +16,128 @@ class CharacterShowcase {
     }
     
     init() {
-        // Create scene
-        this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x1a1a2e);
+        // Get canvas element
+        const canvas = document.getElementById('renderCanvas');
+        
+        // Create engine with high-performance settings
+        this.engine = new BABYLON.Engine(canvas, false, {
+            antialias: false,              // No AA for better performance
+            adaptToDeviceRatio: false,     // Render at device pixel ratio 1
+            powerPreference: "low-power",  // Optimize for low-power devices
+            preserveDrawingBuffer: false,  // Better performance
+            stencil: false,                // Disable stencil buffer if not needed
+            depth: true
+        });
+        
+        // Force fixed resolution for consistent performance
+        this.engine.setHardwareScalingLevel(1.0);
+        
+        // Create scene with optimizations
+        this.scene = new BABYLON.Scene(this.engine);
+        this.scene.clearColor = new BABYLON.Color3.FromHexString('#1a1a2e');
+        
+        // Disable auto-clear for potential performance gains
+        this.scene.autoClear = false;
+        this.scene.autoClearDepthAndStencil = false;
         
         // Create camera
-        this.camera = new THREE.PerspectiveCamera(
-            45,
-            RENDER_WIDTH / RENDER_HEIGHT,
-            0.1,
-            1000
+        this.camera = new BABYLON.ArcRotateCamera(
+            "camera",
+            0,                    // alpha (horizontal rotation)
+            Math.PI / 3,         // beta (vertical rotation)
+            4,                   // radius
+            new BABYLON.Vector3(0, 1, 0),  // target
+            this.scene
         );
-        this.camera.position.set(0, 1.5, 4);
-        this.camera.lookAt(0, 1, 0);
+        this.camera.attachControl(canvas, false);
+        this.camera.lowerRadiusLimit = 2;
+        this.camera.upperRadiusLimit = 10;
         
-        // Create renderer with optimized settings
-        this.renderer = new THREE.WebGLRenderer({
-            antialias: false,
-            powerPreference: 'high-performance'
-        });
-        this.renderer.setSize(RENDER_WIDTH, RENDER_HEIGHT);
-        this.renderer.setPixelRatio(1); // Force 1:1 pixel ratio for performance
-        this.renderer.shadowMap.enabled = false; // Enable shadows for better visuals
+        // Simple lighting for performance
+        const light = new BABYLON.HemisphericLight(
+            "light",
+            new BABYLON.Vector3(0, 1, 0),
+            this.scene
+        );
+        light.intensity = 1.5;
+        light.groundColor = new BABYLON.Color3(0.3, 0.3, 0.4);
         
-        // Append to container
-        const container = document.getElementById('canvas-container');
-        container.appendChild(this.renderer.domElement);
-        
-        // Add simple directional light
-        const light = new THREE.DirectionalLight(0xffffff, 1.5);
-        light.position.set(5, 10, 5);
-        light.castShadow = false;
-        this.scene.add(light);
-        
-        // Add ambient light for better visibility
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        this.scene.add(ambientLight);
-        
-        // Add ground plane for reference
-        // const groundGeometry = new THREE.PlaneGeometry(10, 10);
-        // const groundMaterial = new THREE.MeshBasicMaterial({
-        //     color: 0x16213e,
-        //     side: THREE.DoubleSide
-        // });
-        // const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-        // ground.rotation.x = -Math.PI / 2;
-        // this.scene.add(ground);
+        // Additional directional light for better visibility
+        const dirLight = new BABYLON.DirectionalLight(
+            "dirLight",
+            new BABYLON.Vector3(-1, -2, -1),
+            this.scene
+        );
+        dirLight.intensity = 0.6;
         
         // Load model
         this.loadModel();
         
         // Handle window resize
         window.addEventListener('resize', () => this.onWindowResize());
+        this.onWindowResize();
         
-        // Start animation loop
-        this.animate();
+        // Start render loop
+        this.engine.runRenderLoop(() => {
+            this.animate();
+        });
     }
     
     loadModel() {
-        const loader = new GLTFLoader();
-        
         document.getElementById('animation-name').textContent = 'Loading model...';
         
-        loader.load(
-            MODEL_PATH,
-            (gltf) => {
-                this.model = gltf.scene;
-                
-                // Center and scale model if needed
-                const box = new THREE.Box3().setFromObject(this.model);
-                const center = box.getCenter(new THREE.Vector3());
-                const size = box.getSize(new THREE.Vector3());
-                
-                // Center model
-                this.model.position.x = -center.x;
-                this.model.position.y = -box.min.y; // Place on ground
-                this.model.position.z = -center.z;
-                
-                // Optimize materials for performance
-                this.model.traverse((child) => {
-                    if (child.isMesh) {
-                        child.castShadow = false;
-                        child.receiveShadow = false;
-                        
-                        // Use simpler materials if possible
-                        console.log(child.material)
-                        if (child.material) {
-                            child.material.flatShading = false;
-                            child.material.needsUpdate = true;
+        BABYLON.SceneLoader.ImportMesh(
+            "",                    // Import all meshes
+            "./",                  // Root URL
+            "characters.glb",      // Filename
+            this.scene,
+            (meshes, particleSystems, skeletons, animationGroups) => {
+                // Model loaded successfully
+                if (meshes.length > 0) {
+                    this.model = meshes[0];
+                    
+                    // Center and position model
+                    const boundingInfo = this.model.getHierarchyBoundingVectors();
+                    const center = BABYLON.Vector3.Center(boundingInfo.min, boundingInfo.max);
+                    const size = boundingInfo.max.subtract(boundingInfo.min);
+                    
+                    // Center model
+                    this.model.position.x = -center.x;
+                    this.model.position.y = -boundingInfo.min.y;
+                    this.model.position.z = -center.z;
+                    
+                    // Optimize meshes for performance
+                    meshes.forEach((mesh) => {
+                        if (mesh.material) {
+                            // Freeze materials to avoid shader recompilation
+                            mesh.material.freeze();
+                            
+                            // Disable unnecessary features
+                            mesh.material.disableLighting = false; // Keep basic lighting
                         }
-                    }
-                });
-                
-                this.scene.add(this.model);
+                        
+                        // Freeze world matrix for static parts
+                        // Don't freeze animated meshes
+                        if (!mesh.skeleton) {
+                            mesh.freezeWorldMatrix();
+                        }
+                        
+                        // Disable unnecessary features
+                        mesh.receiveShadows = false;
+                    });
+                    
+                    console.log(`Loaded ${meshes.length} meshes`);
+                }
                 
                 // Setup animations
-                if (gltf.animations && gltf.animations.length > 0) {
-                    this.animations = gltf.animations;
-                    this.mixer = new THREE.AnimationMixer(this.model);
+                if (animationGroups && animationGroups.length > 0) {
+                    this.animationGroups = animationGroups;
                     
-                    console.log(`Found ${this.animations.length} animations:`, 
-                        this.animations.map(a => a.name));
+                    // Stop all animations initially
+                    this.animationGroups.forEach(ag => ag.stop());
+                    
+                    console.log(`Found ${this.animationGroups.length} animations:`, 
+                        this.animationGroups.map(ag => ag.name));
                     
                     this.playNextAnimation();
                 } else {
@@ -128,95 +145,60 @@ class CharacterShowcase {
                     document.getElementById('animation-info').textContent = 'Model loaded successfully';
                 }
             },
-            (progress) => {
-                const percent = (progress.loaded / progress.total * 100).toFixed(0);
-                document.getElementById('animation-info').textContent = `Loading: ${percent}%`;
+            (event) => {
+                // Progress callback
+                if (event.lengthComputable) {
+                    const percent = (event.loaded / event.total * 100).toFixed(0);
+                    document.getElementById('animation-info').textContent = `Loading: ${percent}%`;
+                }
             },
-            (error) => {
-                console.error('Error loading model:', error);
+            (scene, message, exception) => {
+                // Error callback
+                console.error('Error loading model:', message, exception);
                 document.getElementById('animation-name').textContent = 'Error loading model';
-                document.getElementById('animation-info').textContent = error.message;
+                document.getElementById('animation-info').textContent = message;
             }
         );
     }
     
     playNextAnimation() {
-        if (!this.mixer || this.animations.length === 0) return;
+        if (this.animationGroups.length === 0) return;
         
-        // Stop all current actions
-        this.mixer.stopAllAction();
-        
-        // Reset to T-Pose (first animation) before playing next animation
-        if (this.animations.length > 0 && this.currentAnimationIndex !== 0) {
-            const tPoseAction = this.mixer.clipAction(this.animations[0]);
-            tPoseAction.reset();
-            tPoseAction.play();
-            tPoseAction.time = 0;
-            this.mixer.update(0);
-            tPoseAction.stop();
-        }
+        // Stop all current animations
+        this.animationGroups.forEach(ag => ag.stop());
         
         // Get next animation
-        const animation = this.animations[this.currentAnimationIndex];
-        const action = this.mixer.clipAction(animation);
+        const animGroup = this.animationGroups[this.currentAnimationIndex];
         
         // Update UI
         document.getElementById('animation-name').textContent = 
-            animation.name || `Animation ${this.currentAnimationIndex + 1}`;
+            animGroup.name || `Animation ${this.currentAnimationIndex + 1}`;
+        
+        const duration = (animGroup.to - animGroup.from) / 60; // Assuming 60 FPS
         document.getElementById('animation-info').textContent = 
-            `${this.currentAnimationIndex + 1} of ${this.animations.length} | Duration: ${animation.duration.toFixed(1)}s`;
+            `${this.currentAnimationIndex + 1} of ${this.animationGroups.length} | Duration: ${duration.toFixed(1)}s`;
         
         // Play animation once
-        action.setLoop(THREE.LoopOnce);
-        action.clampWhenFinished = true;
-        action.reset();
-        action.play();
+        animGroup.reset();
+        animGroup.start(false, 1.0, animGroup.from, animGroup.to);
         
-        // Setup event listener for when animation finishes
-        const onFinished = (e) => {
-            if (e.action === action) {
-                this.mixer.removeEventListener('finished', onFinished);
-                
-                // Wait a moment, then play next animation
-                setTimeout(() => {
-                    this.currentAnimationIndex = 
-                        (this.currentAnimationIndex + 1) % this.animations.length;
-                    this.playNextAnimation();
-                }, 500);
-            }
-        };
-        
-        this.mixer.addEventListener('finished', onFinished);
+        // Setup callback for when animation finishes
+        animGroup.onAnimationEndObservable.addOnce(() => {
+            // Wait a moment, then play next animation
+            setTimeout(() => {
+                this.currentAnimationIndex = 
+                    (this.currentAnimationIndex + 1) % this.animationGroups.length;
+                this.playNextAnimation();
+            }, 500);
+        });
     }
     
     onWindowResize() {
-        // Keep the render resolution fixed but adjust canvas display
-        const container = document.getElementById('canvas-container');
-        const containerWidth = container.clientWidth;
-        const containerHeight = container.clientHeight;
-        
-        const containerAspect = containerWidth / containerHeight;
-        const renderAspect = RENDER_WIDTH / RENDER_HEIGHT;
-        
-        // Calculate display size maintaining aspect ratio
-        let displayWidth, displayHeight;
-        if (containerAspect > renderAspect) {
-            displayHeight = containerHeight;
-            displayWidth = displayHeight * renderAspect;
-        } else {
-            displayWidth = containerWidth;
-            displayHeight = displayWidth / renderAspect;
-        }
-        
-        this.renderer.domElement.style.width = `${displayWidth}px`;
-        this.renderer.domElement.style.height = `${displayHeight}px`;
+        // Resize engine to match canvas
+        this.engine.resize();
     }
     
     animate() {
-        requestAnimationFrame(() => this.animate());
-        
-        const delta = this.clock.getDelta();
-        
         // Update FPS counter
         this.frameCount++;
         const now = performance.now();
@@ -227,20 +209,20 @@ class CharacterShowcase {
             document.getElementById('fps-counter').textContent = `FPS: ${this.fps}`;
         }
         
-        // Update animations
-        if (this.mixer) {
-            this.mixer.update(delta);
-        }
-        
         // Rotate model slowly for better view
         if (this.model) {
-            this.model.rotation.y += delta * 0.2;
+            this.model.rotation.y += this.engine.getDeltaTime() / 1000 * 0.2;
         }
         
         // Render scene
-        this.renderer.render(this.scene, this.camera);
+        this.scene.render();
     }
 }
 
-// Initialize the application
-new CharacterShowcase();
+// Initialize the application when Babylon.js is loaded
+if (typeof BABYLON !== 'undefined') {
+    new CharacterShowcase();
+} else {
+    console.error('Babylon.js not loaded');
+}
+
