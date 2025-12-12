@@ -108,6 +108,7 @@ class CharacterShowcase {
                     
                     // Optimize meshes for performance
                     meshes.forEach((mesh) => {
+                        console.log(mesh.name)
                         if (mesh.material) {
                             // Freeze materials to avoid shader recompilation
                             mesh.material.freeze();
@@ -118,12 +119,16 @@ class CharacterShowcase {
                         
                         // Freeze world matrix for static parts
                         // Don't freeze animated meshes
-                        if (!mesh.skeleton) {
-                            mesh.freezeWorldMatrix();
-                        }
+                        // if (!mesh.skeleton) {
+                        //     mesh.freezeWorldMatrix();
+                        // }
                         
                         // Disable unnecessary features
                         mesh.receiveShadows = false;
+
+                        // Move mesh to random position in 10m radius
+                        mesh.position.x += (Math.random() - 0.5) * 10;
+                        mesh.position.z += (Math.random() - 0.5) * 10;
                     });
                     
                     console.log(`Loaded ${meshes.length} meshes`);
@@ -209,10 +214,12 @@ class CharacterShowcase {
             document.getElementById('fps-counter').textContent = `FPS: ${this.fps}`;
         }
         
-        // Rotate model slowly for better view
-        if (this.model) {
-            this.model.rotation.y += this.engine.getDeltaTime() / 1000 * 0.2;
-        }
+        // Rotate camera around model
+        const radius = 8;
+        const speed = 0.0005; // Radians per millisecond
+        const angle = now * speed;
+        this.camera.alpha = angle;
+        this.camera.radius = radius;
         
         // Render scene
         this.scene.render();
