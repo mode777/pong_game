@@ -1,7 +1,7 @@
 // Configuration
 const RENDER_WIDTH = 1024;
 const RENDER_HEIGHT = 576;
-const MODEL_PATH = './Characters.glb';
+//const MODEL_PATH = './Characters.glb';
 
 class CharacterShowcase {
     constructor() {
@@ -88,7 +88,7 @@ class CharacterShowcase {
         
         BABYLON.SceneLoader.ImportMesh(
             "",                    // Import all meshes
-            "./",                  // Root URL
+            "./assets/",                  // Root URL
             "Characters.glb",      // Filename
             this.scene,
             (meshes, particleSystems, skeletons, animationGroups) => {
@@ -127,8 +127,10 @@ class CharacterShowcase {
                         mesh.receiveShadows = false;
 
                         // Move mesh to random position in 10m radius
-                        mesh.position.x += (Math.random() - 0.5) * 10;
-                        mesh.position.z += (Math.random() - 0.5) * 10;
+                        if (mesh.name !== "__root__"){
+                            mesh.position.x += (Math.random() - 0.5) * 10;
+                            mesh.position.z += (Math.random() - 0.5) * 10;
+                        }
                     });
                     
                     console.log(`Loaded ${meshes.length} meshes`);

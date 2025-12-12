@@ -1,11 +1,22 @@
 {
   "name": "pong_game",
   "version": "1.0.0",
-  "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@babylonjs/loaders": "^7.37.1",
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.3"
+  },
+  "dependencies": {
+    "@babylonjs/core": "^7.37.1"
   },
   "author": "",
   "license": "ISC",
-  "description": ""
+  "description": "Babylon.js Character Showcase - TypeScript Edition"
 }
