@@ -94,7 +94,7 @@ pong_game/
 │   └── workflows/
 │       └── deploy.yml          # GitHub Actions workflow
 ├── assets/
-│   └── Characters.glb          # 3D model
+│   └── Characters.glb          # 3D model source
 ├── css/
 │   └── styles.css              # Application styles
 ├── src/
@@ -104,6 +104,8 @@ pong_game/
 ├── tsconfig.json               # TypeScript configuration
 └── vite.config.ts              # Vite configuration
 ```
+
+**Note:** The `public/` directory is automatically copied to the `dist/` folder during build. Any files you want to include in the deployment (like 3D models, images, etc.) should be placed in the `public/` directory.
 
 ## Technologies
 
