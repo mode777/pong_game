@@ -9,6 +9,7 @@ import { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh';
 import { AnimationGroup } from '@babylonjs/core/Animations/animationGroup';
 import { ImportMeshAsync } from '@babylonjs/core/Loading/sceneLoader';
 import '@babylonjs/loaders/glTF';
+import { EngineOptions } from '@babylonjs/core';
 
 // Constants
 const CANVAS_ID = 'renderCanvas';
@@ -22,7 +23,7 @@ const CAMERA_RADIUS = 8;
 const RANDOM_POSITION_RADIUS = 10;
 
 // Engine configuration
-const ENGINE_CONFIG = {
+const ENGINE_CONFIG : EngineOptions = {
     antialias: false,
     adaptToDeviceRatio: false,
     powerPreference: "low-power" as const,
@@ -111,7 +112,7 @@ class CharacterShowcase {
 
     private initializeEngine(canvas: HTMLCanvasElement): void {
         this.engine = new Engine(canvas, false, ENGINE_CONFIG);
-        this.engine.setHardwareScalingLevel(1.0);
+        this.engine.setHardwareScalingLevel(2.0);
     }
 
     private initializeScene(): void {
