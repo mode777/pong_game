@@ -26,7 +26,7 @@ export class SceneInitializer {
 
     private initializeEngine(): Engine {
         const engine = new Engine(this.canvas, false, ENGINE_CONFIG);
-        engine.setHardwareScalingLevel(2.0);
+        engine.setHardwareScalingLevel(1.5);
         return engine;
     }
 
