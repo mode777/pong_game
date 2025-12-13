@@ -89,7 +89,6 @@ export class ModelLoader {
 
     private optimizeMeshes(meshes: AbstractMesh[]): void {
         meshes.forEach((mesh) => {
-            console.log(mesh.name);
 
             if (mesh.material) {
                 mesh.material.freeze();

@@ -20,7 +20,13 @@
     //"noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    
+    /* Type definitions */
+    "baseUrl": ".",
+    "paths": {
+      "wampy": ["./src/types/wampy.d.ts"]
+    }
   },
   "include": ["src"]
 }

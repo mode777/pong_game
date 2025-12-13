@@ -6,9 +6,21 @@ import { AnimationController } from './AnimationController';
 import { UIManager } from './UIManager';
 import { PerformanceMonitor } from './PerformanceMonitor';
 import bind from 'bind-decorator';
+import { Wampy } from 'wampy';
 
 // Constants
 const CANVAS_ID = 'renderCanvas';
+
+// WAMP Connection Setup
+console.log('Connecting to WAMP server...');
+const wampy = new Wampy('wss://nexus.alexklingenbeck.de', {
+    realm: 'realm1'
+});
+wampy.connect().then(() => {
+    console.log('Connected to WAMP server');
+}).catch((error) => {
+    console.error('Failed to connect to WAMP server:', error);
+});
 
 class CharacterShowcase {
     private sceneInitializer!: SceneInitializer;
