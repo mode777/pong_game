@@ -98,7 +98,10 @@ export class ModelLoader {
             mesh.receiveShadows = false;
 
             if (mesh.name !== "__root__") {
-                this.randomizePosition(mesh);
+                //this.randomizePosition(mesh);
+            }
+            if(mesh.skeleton && mesh.name !== "MiniCharacter_SchoolBoy_01"){
+                mesh.visibility = 0
             }
         });
     }
