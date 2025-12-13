@@ -9,7 +9,7 @@ import { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh';
 import { AnimationGroup } from '@babylonjs/core/Animations/animationGroup';
 import { ImportMeshAsync } from '@babylonjs/core/Loading/sceneLoader';
 import '@babylonjs/loaders/glTF';
-import { EngineOptions } from '@babylonjs/core';
+import { EngineOptions, ScenePerformancePriority } from '@babylonjs/core';
 
 // Constants
 const CANVAS_ID = 'renderCanvas';
@@ -117,9 +117,13 @@ class CharacterShowcase {
 
     private initializeScene(): void {
         this.scene = new Scene(this.engine);
+        this.scene.performancePriority = ScenePerformancePriority.Aggressive;
         this.scene.clearColor = Color4.FromHexString(SCENE_BACKGROUND_COLOR);
         this.scene.autoClear = false;
         this.scene.autoClearDepthAndStencil = false;
+        this.scene.skipPointerDownPicking = true;
+        this.scene.skipPointerMovePicking = true;
+        this.scene.skipPointerUpPicking = true;
     }
 
     private initializeCamera(canvas: HTMLCanvasElement): void {
