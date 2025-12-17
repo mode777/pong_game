@@ -1,4 +1,4 @@
-import { EventEmitter } from './EventEmitter';
+import { EventEmitter } from '@local/common';
 
 const FPS_UPDATE_INTERVAL = 1000;
 

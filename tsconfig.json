@@ -25,7 +25,12 @@
     /* Type definitions */
     "baseUrl": ".",
     "paths": {
-      "wampy": ["./src/types/wampy.d.ts"]
+      "wampy": ["./src/types/wampy.d.ts"],
+      "@local/common": ["./src/common"],
+      "@local/babylon": ["./src/babylon"],
+      "@local/rpc": ["./src/rpc"],
+      "@local/rpc-game": ["./src/rpc-game"],
+      "@local/rps-game": ["./src/rps-game"]
     }
   },
   "include": ["src"]

@@ -1,5 +1,5 @@
 import { AnimationGroup } from '@babylonjs/core/Animations/animationGroup';
-import { EventEmitter } from './EventEmitter';
+import { EventEmitter } from '@local/common';
 
 const ANIMATION_DELAY = 500;
 const ASSUMED_FPS = 60;

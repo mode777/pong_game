@@ -1,4 +1,231 @@
 export default Wampy;
+
+/**
+ * Generic dictionary type
+ */
+export type Dict = { [key: string]: any };
+
+/**
+ * Generic callback function
+ */
+export type Callback = () => void;
+
+/**
+ * Error callback function
+ */
+export type ErrorCallback = (args: ErrorArgs) => void;
+
+/**
+ * Event callback function
+ */
+export type EventCallback = (args: DataArgs) => void;
+
+/**
+ * Success callback function
+ */
+export type SuccessCallback = (args: DataArgs) => void;
+
+/**
+ * RPC callback function
+ */
+export type RPCCallback = (args: DataArgs) => RPCResult | void;
+
+/**
+ * Challenge callback function for authentication
+ */
+export type ChallengeCallback = (auth_method: string, extra: Dict) => string;
+
+/**
+ * Payload type - can be various data types
+ */
+export type Payload = Args | Dict | string | number | boolean | any[] | null;
+
+/**
+ * Arguments structure with list and dictionary
+ */
+export interface Args {
+    argsList: any[];
+    argsDict: Dict;
+}
+
+/**
+ * Error arguments structure
+ */
+export interface ErrorArgs {
+    error: string;
+    details: Dict;
+}
+
+/**
+ * Data arguments structure
+ */
+export interface DataArgs extends Args {
+    details: Dict;
+}
+
+/**
+ * RPC options
+ */
+export interface RPCOptions {
+    process?: boolean;
+}
+
+/**
+ * RPC result structure
+ */
+export interface RPCResult extends Args {
+    options: RPCOptions;
+}
+
+/**
+ * Subscribe callbacks hash
+ */
+export interface SubscribeCallbacksHash {
+    onSuccess?: Callback;
+    onError?: ErrorCallback;
+    onEvent?: EventCallback;
+}
+
+/**
+ * Unsubscribe callbacks hash
+ */
+export interface UnsubscibeCallbacksHash extends SubscribeCallbacksHash {
+}
+
+/**
+ * Publish callbacks hash
+ */
+export interface PublishCallbacksHash {
+    onSuccess?: Callback;
+    onError?: ErrorCallback;
+}
+
+/**
+ * Call callbacks hash
+ */
+export interface CallCallbacksHash {
+    onSuccess?: SuccessCallback;
+    onError?: ErrorCallback;
+}
+
+/**
+ * Cancel callbacks hash
+ */
+export interface CancelCallbacksHash {
+    onSuccess?: Callback;
+    onError?: Callback;
+}
+
+/**
+ * Register callbacks hash
+ */
+export interface RegisterCallbacksHash {
+    rpc: RPCCallback;
+    onSuccess?: Callback;
+    onError?: ErrorCallback;
+}
+
+/**
+ * Unregister callbacks hash
+ */
+export interface UnregisterCallbacksHash {
+    onSuccess?: Callback;
+    onError?: ErrorCallback;
+}
+
+/**
+ * Subscribe advanced options
+ */
+export interface SubscribeAdvancedOptions {
+    match?: "prefix" | "wildcard";
+    get_retained?: boolean;
+}
+
+/**
+ * Advanced options for publish and other operations
+ */
+export interface AdvancedOptions {
+    exclude?: number | number[];
+    eligible?: number | number[];
+    exclude_me?: boolean;
+    disclose_me?: boolean;
+}
+
+/**
+ * Publish advanced options
+ */
+export interface PublishAdvancedOptions extends AdvancedOptions {
+    exclude_authid?: string | string[];
+    exclude_authrole?: string | string[];
+    eligible_authid?: string | string[];
+    eligible_authrole?: string | string[];
+    ppt_scheme?: string;
+    ppt_serializer?: string;
+    ppt_cipher?: string;
+    ppt_keyid?: string;
+    retain?: boolean;
+}
+
+/**
+ * Call advanced options
+ */
+export interface CallAdvancedOptions {
+    disclose_me?: boolean;
+    receive_progress?: boolean;
+    progress_callback?: (args: DataArgs) => void;
+    timeout?: number;
+    ppt_scheme?: string;
+    ppt_serializer?: string;
+    ppt_cipher?: string;
+    ppt_keyid?: string;
+}
+
+/**
+ * Cancel advanced options
+ */
+export interface CancelAdvancedOptions {
+    mode?: "skip" | "kill" | "killnowait";
+}
+
+/**
+ * Register advanced options
+ */
+export interface RegisterAdvancedOptions {
+    match?: "prefix" | "wildcard";
+    invoke?: "single" | "roundrobin" | "random" | "first" | "last";
+}
+
+/**
+ * Wampy configuration options
+ */
+export interface WampyOptions {
+    autoReconnect?: boolean;
+    reconnectInterval?: number;
+    maxRetries?: number;
+    realm?: string;
+    helloCustomDetails?: any;
+    authid?: string;
+    authmethods?: string[];
+    onChallenge?: ChallengeCallback;
+    onConnect?: Callback;
+    onClose?: Callback;
+    onError?: Callback;
+    onReconnect?: Callback;
+    onReconnectSuccess?: Callback;
+    ws?: any;
+    serializer?: any;
+    uriValidation?: "strict" | "loose";
+}
+
+/**
+ * Wampy operation status
+ */
+export interface WampyOpStatus {
+    code: number;
+    description: string;
+    reqId?: number;
+}
+
 /**
  * WAMP Client Class
  */
@@ -6,367 +233,10 @@ export class Wampy {
     /**
      * Wampy constructor
      * @param {string} [url]
-     * @param {Object} [options]
+     * @param {WampyOptions} [options]
      */
-    constructor(url?: string, options?: any);
-    /**
-     * Wampy version
-     * @type {string}
-     * @private
-     */
-    private version;
-    /**
-     * WS Url
-     * @type {string}
-     * @private
-     */
-    private _url;
-    /**
-     * WS protocols
-     * @type {Array}
-     * @private
-     */
-    private _protocols;
-    /**
-     * WAMP features, supported by Wampy
-     * @type {object}
-     * @private
-     */
-    private _wamp_features;
-    /**
-     * Internal cache for object lifetime
-     * @type {Object}
-     * @private
-     */
-    private _cache;
-    /**
-     * WebSocket object
-     * @type {WebSocket}
-     * @private
-     */
-    private _ws;
-    /**
-     * Internal queue for websocket requests, for case of disconnect
-     * @type {Array}
-     * @private
-     */
-    private _wsQueue;
-    /**
-     * Internal queue for wamp requests
-     * @type {object}
-     * @private
-     */
-    private _requests;
-    /**
-     * Stored RPC
-     * @type {object}
-     * @private
-     */
-    private _calls;
-    /**
-     * Stored Pub/Subs to access by ID
-     * @type {Map}
-     * @private
-     */
-    private _subscriptionsById;
-    /**
-     * Stored Pub/Subs to access by Key
-     * @type {Map}
-     * @private
-     */
-    private _subscriptionsByKey;
-    /**
-     * Stored RPC Registrations
-     * @type {object}
-     * @private
-     */
-    private _rpcRegs;
-    /**
-     * Stored RPC names
-     * @type {Set}
-     * @private
-     */
-    private _rpcNames;
-    /**
-     * Options hash-table
-     * @type {Object}
-     * @private
-     */
-    private _options;
-    /**
-     * Internal logger
-     * @private
-     */
-    private _log;
-    /**
-     * Get the new unique request id
-     * @returns {number}
-     * @private
-     */
-    private _getReqId;
-    /**
-     * Check if input is an object literal
-     * @param input
-     * @returns {boolean}
-     * @private
-     */
-    private _isPlainObject;
-    /**
-     * Set websocket protocol based on options
-     * @private
-     */
-    private _setWsProtocols;
-    /**
-     * Fill instance operation status
-     * @param {Error} err
-     * @private
-     */
-    private _fillOpStatusByError;
-    /**
-     * Prerequisite checks for any wampy api call
-     * @param {object} topicType { topic: URI, patternBased: true|false, allowWAMP: true|false }
-     * @param {string} role
-     * @returns {boolean}
-     * @private
-     */
-    private _preReqChecks;
-    /**
-     * Check for specified feature in a role of connected WAMP Router
-     * @param {string} role
-     * @param {string} feature
-     * @returns {boolean}
-     * @private
-     */
-    private _checkRouterFeature;
-    /**
-     * Check for PPT mode options correctness
-     * @param {string} role WAMP Router Role to check support
-     * @param {object} options
-     * @returns {boolean}
-     * @private
-     */
-    private _checkPPTOptions;
-    /**
-     * Validate uri
-     * @param {string} uri
-     * @param {boolean} isPatternBased
-     * @param {boolean} isWampAllowed
-     * @returns {boolean}
-     * @private
-     */
-    private _validateURI;
-    /**
-     * Prepares PPT/E2EE payload for adding to WAMP message
-     * @param {string|number|Array|object} payload
-     * @param {Object} options
-     * @returns {Object}
-     * @private
-     */
-    private _packPPTPayload;
-    /**
-     * Unpack PPT/E2EE payload to common
-     * @param {string} role
-     * @param {Array} pptPayload
-     * @param {Object} options
-     * @returns {Object}
-     * @private
-     */
-    private _unpackPPTPayload;
-    /**
-     * Encode WAMP message
-     * @param {Array} msg
-     * @returns {*}
-     * @private
-     */
-    private _encode;
-    /**
-     * Decode WAMP message
-     * @param  msg
-     * @returns {Promise}
-     * @private
-     */
-    private _decode;
-    /**
-     * Hard close of connection due to protocol violations
-     * @param {string} errorUri
-     * @param {string} details
-     * @param {boolean} [noSend]
-     * @private
-     */
-    private _hardClose;
-    /**
-     * Send encoded message to server
-     * @param {Array} [msg]
-     * @private
-     */
-    private _send;
-    /**
-     * Reject (fail) all ongoing promises on connection closing
-     * @private
-     * @param {Error} error
-     */
-    private _reject_ongoing_promises;
-    /**
-     * Reset internal state and cache
-     * @private
-     */
-    private _resetState;
-    /**
-     * Initialize internal websocket callbacks
-     * @private
-     */
-    private _initWsCallbacks;
-    /**
-     * Internal websocket on open callback
-     * @private
-     */
-    private _wsOnOpen;
-    /**
-     * Internal websocket on close callback
-     * @param {object} event
-     * @private
-     */
-    private _wsOnClose;
-    /**
-     * Internal websocket on event callback
-     * @param {object} event
-     * @private
-     */
-    private _wsOnMessage;
-    /**
-     * Validates the requestId for message types that need this kind of validation
-     * @param {Array} data - [messageType, requestId]
-     * @return {boolean} true if it's a valid request and false if it isn't
-     * @private
-     */
-    private _isRequestIdValid;
-    /**
-     * Handles websocket welcome message event
-     * WAMP SPEC: [WELCOME, Session|id, Details|dict]
-     * @param {Array} [, sessionId, details] - decoded event data
-     * @private
-     */
-    private _onWelcomeMessage;
-    /**
-     * Handles websocket abort message event
-     * WAMP SPEC: [ABORT, Details|dict, Error|uri]
-     * @param {Array} [, details, error] - decoded event data array
-     * @private
-     */
-    private _onAbortMessage;
-    /**
-     * Handles websocket challenge message event
-     * WAMP SPEC: [CHALLENGE, AuthMethod|string, Extra|dict]
-     * @param {Array} [, authMethod, extra] - decoded event data array
-     * @private
-     */
-    private _onChallengeMessage;
-    /**
-     * Handles websocket goodbye message event
-     * WAMP SPEC: [GOODBYE, Details|dict, Reason|uri]
-     * @private
-     */
-    private _onGoodbyeMessage;
-    /**
-     * Handles websocket error message event
-     * WAMP SPEC: [ERROR, REQUEST.Type|int, REQUEST.Request|id, Details|dict,
-     *             Error|uri, (Arguments|list, ArgumentsKw|dict)]
-     * @param {Array} [, requestType, requestId, details, error, argsList, argsDict] - decoded event data array
-     * @private
-     */
-    private _onErrorMessage;
-    /**
-     * Handles websocket subscribed message event
-     * WAMP SPEC: [SUBSCRIBED, SUBSCRIBE.Request|id, Subscription|id]
-     * @param {Array} [, requestId, subscriptionId] - decoded event data Array, with the
-     * second and third elements of the Array being the requestId and subscriptionId respectively
-     * @private
-     */
-    private _onSubscribedMessage;
-    /**
-     * Handles websocket unsubscribed message event
-     * WAMP SPEC: [UNSUBSCRIBED, UNSUBSCRIBE.Request|id]
-     * @param {Array} [, requestId] - decoded event data Array, with the
-     * second element of the Array being the requestId
-     * @private
-     */
-    private _onUnsubscribedMessage;
-    /**
-     * Handles websocket published message event
-     * WAMP SPEC: [PUBLISHED, PUBLISH.Request|id, Publication|id]
-     * @param {Array} [, requestId, publicationId] - decoded event data
-     * @private
-     */
-    private _onPublishedMessage;
-    /**
-     * Handles websocket event message event
-     * WAMP SPEC: [EVENT, SUBSCRIBED.Subscription|id, PUBLISHED.Publication|id,
-     *            Details|dict, PUBLISH.Arguments|list, PUBLISH.ArgumentKw|dict]
-     * @param {Array} [, subscriptionId, publicationId, details, argsList, argsDict] - decoded event data
-     * @private
-     */
-    private _onEventMessage;
-    /**
-     * Handles websocket result message event
-     * WAMP SPEC: [RESULT, CALL.Request|id, Details|dict,
-     *             YIELD.Arguments|list, YIELD.ArgumentsKw|dict]
-     * @param {object} data - decoded event data
-     * @private
-     */
-    private _onResultMessage;
-    /**
-     * Handles websocket registered message event
-     * WAMP SPEC: [REGISTERED, REGISTER.Request|id, Registration|id]
-     * @param {Array} [, requestId, registrationId] - decoded event data array
-     * @private
-     */
-    private _onRegisteredMessage;
-    /**
-     * Handles websocket unregistered message event
-     * WAMP SPEC: [UNREGISTERED, UNREGISTER.Request|id]
-     * @param {Array} [, requestId] - decoded event data array
-     * @private
-     */
-    private _onUnregisteredMessage;
-    /**
-     * Handles websocket invocation message event
-     * WAMP SPEC: [INVOCATION, Request|id, REGISTERED.Registration|id, Details|dict,
-     *             CALL.Arguments|list, CALL.ArgumentsKw|dict]
-     * @param {Array} data - decoded event data array
-     * @private
-     */
-    private _onInvocationMessage;
-    /**
-     * Internal websocket on error callback
-     * @param {object} error
-     * @private
-     */
-    private _wsOnError;
-    /**
-     * Reconnect to server in case of websocket error
-     * @private
-     */
-    private _wsReconnect;
-    /**
-     * Resubscribe to topics in case of communication error
-     * @private
-     */
-    private _renewSubscriptions;
-    /**
-     * ReRegister RPCs in case of communication error
-     * @private
-     */
-    private _renewRegistrations;
-    /**
-     * Generate a unique key for combination of topic and options
-     *
-     * This is needed to allow subscriptions to the same topic URI but with different options
-     *
-     * @param {string} topic
-     * @param {object} options
-     * @private
-     */
-    private _getSubscriptionKey;
+    constructor(url?: string, options?: WampyOptions);
+    
     /*************************************************************************
      * Wampy public API
      *************************************************************************/
@@ -378,33 +248,33 @@ export class Wampy {
      * To get options - call without parameters
      * To set options - pass hash-table with options values
      *
-     * @param {object} [newOptions]
-     * @returns {*}
+     * @param {WampyOptions} [newOptions]
+     * @returns {WampyOptions | Wampy}
      */
-    options(newOptions?: object): any;
+    options(newOptions?: WampyOptions): WampyOptions | Wampy;
     /**
      * Wampy options getter
      *
-     * @returns {object}
+     * @returns {WampyOptions}
      */
-    getOptions(): object;
+    getOptions(): WampyOptions;
     /**
      * Wampy options setter
      *
-     * @param {object} newOptions
-     * @returns {*}
+     * @param {WampyOptions} newOptions
+     * @returns {Wampy}
      */
-    setOptions(newOptions: object): any;
+    setOptions(newOptions: WampyOptions): Wampy;
     /**
      * Get the status of last operation
      *
-     * @returns {object} with 3 fields: code, error, reqId
+     * @returns {WampyOpStatus} with 3 fields: code, error, reqId
      *      code: 0 - if operation was successful
      *      code > 0 - if error occurred
      *      error: error instance containing details
      *      reqId: last successfully sent request ID
      */
-    getOpStatus(): object;
+    getOpStatus(): WampyOpStatus;
     /**
      * Get the WAMP Session ID
      *
@@ -432,8 +302,8 @@ export class Wampy {
      * Subscribe to a topic on a broker
      *
      * @param {string} topic - a URI to subscribe to
-     * @param {function} onEvent - received event callback
-     * @param {object} [advancedOptions] - optional parameter. Must include any or all of the options:
+     * @param {EventCallback | SubscribeCallbacksHash} onEvent - received event callback
+     * @param {SubscribeAdvancedOptions} [advancedOptions] - optional parameter. Must include any or all of the options:
      *                          {
      *                              match: string matching policy ("exact"|"prefix"|"wildcard")
      *                              get_retained: bool request access to the Retained Event
@@ -441,26 +311,26 @@ export class Wampy {
      *
      * @returns {Promise}
      */
-    subscribe(topic: string, onEvent: Function, advancedOptions?: object): Promise<any>;
+    subscribe(topic: string, onEvent: EventCallback | SubscribeCallbacksHash, advancedOptions?: SubscribeAdvancedOptions): Promise<any>;
     /**
      * Unsubscribe from topic
      * @param {string|number} subscriptionIdOrKey Subscription ID or Key, received during .subscribe()
-     * @param {function} [onEvent] - received event callback to remove (optional). If not provided -
+     * @param {EventCallback | UnsubscibeCallbacksHash} [onEvent] - received event callback to remove (optional). If not provided -
      *                               all callbacks will be removed and unsubscribed on the server
      * @returns {Promise}
      */
-    unsubscribe(subscriptionIdOrKey: string | number, onEvent?: Function): Promise<any>;
+    unsubscribe(subscriptionIdOrKey: string | number, onEvent?: EventCallback | UnsubscibeCallbacksHash): Promise<any>;
     /**
      * Publish an event to the topic
      * @param {string} topic
-     * @param {string|number|Array|object} [payload] - can be either a value of any type or null or even omitted.
+     * @param {Payload} [payload] - can be either a value of any type or null or even omitted.
      *                          Also, it is possible to pass array and object-like data simultaneously.
      *                          In this case pass a hash-table with next attributes:
      *                          {
      *                             argsList: array payload (may be omitted)
      *                             argsDict: object payload (may be omitted)
      *                          }
-     * @param {object} [advancedOptions] - optional parameter. Must include any or all of the options:
+     * @param {PublishCallbacksHash | PublishAdvancedOptions} [advancedOptions] - optional parameter. Must include any or all of the options:
      *                          { exclude: integer|array WAMP session id(s) that won't receive a published event,
      *                                      even though they may be subscribed
      *                            exclude_authid: string|array Authentication id(s) that won't receive
@@ -486,42 +356,18 @@ export class Wampy {
      *                          }
      * @returns {Promise}
      */
-    publish(topic: string, payload?: string | number | any[] | object, advancedOptions?: object): Promise<any>;
-    /**
-     * Extract custom options from advanced options as per WAMP spec 3.1
-     *
-     * @param {object} advancedOptions
-     * @private
-     * @returns {object}
-     */
-    private _extractCustomOptions;
-    /**
-     * Process CALL advanced options and transform them for the WAMP CALL message Options
-     *
-     * @param {object} advancedOptions
-     * @private
-     * @returns {object}
-     */
-    private _getCallMessageOptionsFromAdvancedOptions;
-    /**
-     * Remote Procedure Call Internal Implementation
-     * @param {string} topic - same as in call method
-     * @param {string|number|Array|object} [payload] - same as in call method
-     * @param {object} [advancedOptions] - same as in call method
-     * @returns {number} Request ID
-     */
-    _callInternal(topic: string, payload?: string | number | any[] | object, advancedOptions?: object): number;
+    publish(topic: string, payload?: Payload, advancedOptions?: PublishCallbacksHash | PublishAdvancedOptions): Promise<any>;
     /**
      * Remote Procedure Call
      * @param {string} topic - a topic URI to be called
-     * @param {string|number|Array|object} [payload] - can be either a value of any type or null. Also, it
+     * @param {Payload} [payload] - can be either a value of any type or null. Also, it
      *                          is possible to pass array and object-like data simultaneously.
      *                          In this case pass a hash-table with next attributes:
      *                          {
      *                             argsList: array payload (may be omitted)
      *                             argsDict: object payload (may be omitted)
      *                          }
-     * @param {object} [advancedOptions] - optional parameter. Must include any or all of the options:
+     * @param {SuccessCallback | CallCallbacksHash | CallAdvancedOptions} [advancedOptions] - optional parameter. Must include any or all of the options:
      *                          { disclose_me:      bool flag of disclosure of Caller identity (WAMP session ID)
      *                                              to endpoints of a routed call
      *                            progress_callback: function for handling progressive call results
@@ -534,7 +380,7 @@ export class Wampy {
      *                          }
      * @returns {Promise}
      */
-    call(topic: string, payload?: string | number | any[] | object, advancedOptions?: object): Promise<any>;
+    call(topic: string, payload?: Payload, advancedOptions?: SuccessCallback | CallCallbacksHash | CallAdvancedOptions): Promise<RPCResult>;
     /**
      * @typedef {function} ProgressiveCallSendData
      * @param {string|number|Array|object} [payload] - can be either a value of any type or null. Also, it
@@ -566,14 +412,14 @@ export class Wampy {
      * Callee and Dealer should support the "progressive_call_invocations" feature as well.
      *
      * @param {string} topic - a topic URI to be called
-     * @param {string|number|Array|object} [payload] - can be either a value of any type or null. Also, it
+     * @param {Payload} [payload] - can be either a value of any type or null. Also, it
      *                          is possible to pass array and object-like data simultaneously.
      *                          In this case pass a hash-table with next attributes:
      *                          {
      *                             argsList: array payload (maybe omitted)
      *                             argsDict: object payload (maybe omitted)
      *                          }
-     * @param {object} [advancedOptions] - optional parameter. Must include any or all of the options:
+     * @param {CallAdvancedOptions} [advancedOptions] - optional parameter. Must include any or all of the options:
      *                          { disclose_me:      bool flag of disclosure of Caller identity (WAMP session ID)
      *                                              to endpoints of a routed call
      *                            progress_callback: function for handling progressive call results
@@ -586,7 +432,7 @@ export class Wampy {
      *                          }
      * @returns {ProgressiveCallReturn} - An object containing the result promise and the sendData function.
      */
-    progressiveCall(topic: string, payload?: string | number | any[] | object, advancedOptions?: object): {
+    progressiveCall(topic: string, payload?: Payload, advancedOptions?: CallAdvancedOptions): {
         /**
          * - A promise that resolves to the result of the RPC call.
          */
@@ -594,36 +440,37 @@ export class Wampy {
         /**
          * - A function to send additional data to the ongoing RPC call.
          */
-        sendData: Function;
+        sendData: (payload?: Payload, advancedOptions?: { progress?: boolean }) => void;
     };
     /**
      * RPC invocation cancelling
      *
-     * @param {int} reqId RPC call request ID
-     * @param {object} [advancedOptions] - optional parameter. Must include any or all of the options:
+     * @param {number} reqId RPC call request ID
+     * @param {Callback | CancelCallbacksHash | CancelAdvancedOptions} [advancedOptions] - optional parameter. Must include any or all of the options:
      *                          { mode: string|one of the possible modes:
      *                                  "skip" | "kill" | "killnowait". Skip is default.
      *                          }
      *
-     * @returns {Boolean}
+     * @returns {Wampy}
      */
-    cancel(reqId: int, advancedOptions?: object): boolean;
+    cancel(reqId: number, advancedOptions?: Callback | CancelCallbacksHash | CancelAdvancedOptions): Wampy;
     /**
      * RPC registration for invocation
      * @param {string} topic
-     * @param {function} rpc - rpc that will receive invocations
-     * @param {object} [advancedOptions] - optional parameter. Must include any or all of the options:
+     * @param {RPCCallback | RegisterCallbacksHash} rpc - rpc that will receive invocations
+     * @param {RegisterAdvancedOptions} [advancedOptions] - optional parameter. Must include any or all of the options:
      *                          {
      *                              match: string matching policy ("exact"|"prefix"|"wildcard")
      *                              invoke: string invocation policy ("single"|"roundrobin"|"random"|"first"|"last")
      *                          }
      * @returns {Promise}
      */
-    register(topic: string, rpc: Function, advancedOptions?: object): Promise<any>;
+    register(topic: string, rpc: RPCCallback | RegisterCallbacksHash | boolean | number | void | undefined | null | any[] | Dict, advancedOptions?: RegisterAdvancedOptions): Promise<any>;
     /**
      * RPC unregistration for invocation
      * @param {string} topic - a topic URI to unregister
+     * @param {Callback | UnregisterCallbacksHash} [callbacks] - optional callbacks
      * @returns {Promise}
      */
-    unregister(topic: string): Promise<any>;
+    unregister(topic: string, callbacks?: Callback | UnregisterCallbacksHash): Promise<any>;
 }

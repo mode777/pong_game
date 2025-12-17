@@ -9,6 +9,7 @@
   },
   "devDependencies": {
     "@babylonjs/loaders": "^7.37.1",
+    "@types/autobahn": "^20.9.4",
     "@types/node": "^22.10.2",
     "typescript": "^5.7.2",
     "vite": "^6.0.3"
@@ -16,6 +17,8 @@
   "dependencies": {
     "@babylonjs/core": "^7.37.1",
     "bind-decorator": "^1.0.11",
+    "loglevel": "^1.9.2",
+    "pixi.js": "^8.14.3",
     "wampy": "^7.2.0"
   },
   "author": "",

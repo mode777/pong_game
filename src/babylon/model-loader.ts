@@ -3,7 +3,7 @@ import { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh';
 import { AnimationGroup } from '@babylonjs/core/Animations/animationGroup';
 import { ImportMeshAsync } from '@babylonjs/core/Loading/sceneLoader';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
-import { EventEmitter } from './EventEmitter';
+import { EventEmitter } from '@local/common';
 import '@babylonjs/loaders/glTF';
 
 const MODEL_PATH = './assets/';

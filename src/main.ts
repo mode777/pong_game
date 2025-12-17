@@ -1,26 +1,17 @@
-import { SceneInitializer } from './SceneInitializer';
-import { CameraController } from './CameraController';
-import { LightingManager } from './LightingManager';
-import { ModelLoader } from './ModelLoader';
-import { AnimationController } from './AnimationController';
-import { UIManager } from './UIManager';
-import { PerformanceMonitor } from './PerformanceMonitor';
+import { 
+    SceneInitializer,
+    CameraController,
+    LightingManager,
+    ModelLoader,
+    AnimationController,
+    UIManager,
+    PerformanceMonitor
+} from '@local/babylon';
 import bind from 'bind-decorator';
-import { Wampy } from 'wampy';
+import { bootstrapApplication } from '@local/common';
 
 // Constants
 const CANVAS_ID = 'renderCanvas';
-
-// WAMP Connection Setup
-console.log('Connecting to WAMP server...');
-const wampy = new Wampy('wss://nexus.alexklingenbeck.de', {
-    realm: 'realm1'
-});
-wampy.connect().then(() => {
-    console.log('Connected to WAMP server');
-}).catch((error) => {
-    console.error('Failed to connect to WAMP server:', error);
-});
 
 class CharacterShowcase {
     private sceneInitializer!: SceneInitializer;
@@ -126,9 +117,4 @@ function initializeApplication(): void {
     new CharacterShowcase();
 }
 
-// Initialize the application when DOM is loaded
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeApplication);
-} else {
-    initializeApplication();
-}
+bootstrapApplication(initializeApplication);
